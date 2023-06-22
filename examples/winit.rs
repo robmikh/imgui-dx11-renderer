@@ -72,7 +72,11 @@ fn create_swapchain(device: &ID3D11Device, window: HWND) -> Result<IDXGISwapChai
         Flags: DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH.0 as u32,
     };
 
-    let swap_chain = unsafe { let mut swap_chain = None; factory.CreateSwapChain(device, &sc_desc, &mut swap_chain).ok()?; swap_chain.unwrap() };
+    let swap_chain = unsafe {
+        let mut swap_chain = None;
+        factory.CreateSwapChain(device, &sc_desc, &mut swap_chain).ok()?;
+        swap_chain.unwrap()
+    };
     Ok(swap_chain)
 }
 
@@ -103,9 +107,7 @@ fn main() -> Result<()> {
 
     let device = create_device()?;
     let swapchain = unsafe { create_swapchain(&device, transmute(window.hwnd()))? };
-    let device_ctx = unsafe {
-        device.GetImmediateContext()?
-    };
+    let device_ctx = unsafe { device.GetImmediateContext()? };
     let mut target = Some(create_render_target(&swapchain, &device)?);
 
     let mut imgui = Context::create();

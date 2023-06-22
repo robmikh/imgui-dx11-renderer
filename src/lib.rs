@@ -207,7 +207,13 @@ impl Renderer {
 
         ctx.RSSetViewports(Some(&[vp]));
         ctx.IASetInputLayout(&self.input_layout);
-        ctx.IASetVertexBuffers(0, 1, Some(&Some(self.vertex_buffer.get_buf().clone())), Some(&stride), Some(&0));
+        ctx.IASetVertexBuffers(
+            0,
+            1,
+            Some(&Some(self.vertex_buffer.get_buf().clone())),
+            Some(&stride),
+            Some(&0),
+        );
         ctx.IASetIndexBuffer(self.index_buffer.get_buf(), draw_fmt, 0);
         ctx.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         ctx.VSSetShader(&self.vertex_shader, Some(&[]));
@@ -257,9 +263,21 @@ impl Renderer {
 
     unsafe fn write_buffers(&self, draw_data: &DrawData) -> Result<()> {
         let mut vtx_resource = D3D11_MAPPED_SUBRESOURCE::default();
-        self.context.Map(self.vertex_buffer.get_buf(), 0, D3D11_MAP_WRITE_DISCARD, 0, Some(&mut vtx_resource))?;
+        self.context.Map(
+            self.vertex_buffer.get_buf(),
+            0,
+            D3D11_MAP_WRITE_DISCARD,
+            0,
+            Some(&mut vtx_resource),
+        )?;
         let mut idx_resource = D3D11_MAPPED_SUBRESOURCE::default();
-        self.context.Map(self.index_buffer.get_buf(), 0, D3D11_MAP_WRITE_DISCARD, 0, Some(&mut idx_resource))?;
+        self.context.Map(
+            self.index_buffer.get_buf(),
+            0,
+            D3D11_MAP_WRITE_DISCARD,
+            0,
+            Some(&mut idx_resource),
+        )?;
 
         let mut vtx_dst = slice::from_raw_parts_mut(
             vtx_resource.pData.cast::<DrawVert>(),
@@ -283,7 +301,13 @@ impl Renderer {
         self.context.Unmap(self.index_buffer.get_buf(), 0);
 
         let mut mapped_resource = D3D11_MAPPED_SUBRESOURCE::default();
-        self.context.Map(&self.constant_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, Some(&mut mapped_resource))?;
+        self.context.Map(
+            &self.constant_buffer,
+            0,
+            D3D11_MAP_WRITE_DISCARD,
+            0,
+            Some(&mut mapped_resource),
+        )?;
         let l = draw_data.display_pos[0];
         let r = draw_data.display_pos[0] + draw_data.display_size[0];
         let t = draw_data.display_pos[1];
@@ -417,7 +441,7 @@ impl Renderer {
             MiscFlags: D3D11_RESOURCE_MISC_FLAG(0),
             StructureByteStride: 0,
         };
-        let vertex_constant_buffer = {      
+        let vertex_constant_buffer = {
             let mut buffer = None;
             device.CreateBuffer(&desc, None, Some(&mut buffer))?;
             buffer.unwrap()
@@ -554,7 +578,10 @@ impl StateBackup {
             Some(&mut result.blend_factor),
             Some(&mut result.sample_mask),
         );
-        ctx.OMGetDepthStencilState(Some(&mut result.depth_stencil_state), Some(&mut result.stencil_ref));
+        ctx.OMGetDepthStencilState(
+            Some(&mut result.depth_stencil_state),
+            Some(&mut result.stencil_ref),
+        );
         ctx.PSGetShaderResources(0, Some(&mut result.shader_resource));
         ctx.PSGetSamplers(0, Some(&mut result.sampler));
         ctx.PSGetShader(&mut result.ps_shader, Some(&mut result.ps_instances), Some(&mut 256));
@@ -623,18 +650,9 @@ impl StateBackup {
             }
             ctx.IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             if let Some(buffer) = self.index_buffer {
-                ctx.IASetIndexBuffer(
-                    &buffer,
-                    self.index_buffer_format,
-                    self.index_buffer_offset,
-                );
+                ctx.IASetIndexBuffer(&buffer, self.index_buffer_format, self.index_buffer_offset);
             } else {
-                ctx.IASetIndexBuffer(
-                    None,
-                    self.index_buffer_format,
-                    self.index_buffer_offset,
-                );
-
+                ctx.IASetIndexBuffer(None, self.index_buffer_format, self.index_buffer_offset);
             }
             ctx.IASetVertexBuffers(
                 0,
