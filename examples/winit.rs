@@ -3,7 +3,7 @@ use std::time::Instant;
 
 use imgui::{Context, FontConfig, FontSource};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
-use windows::core::Interface;
+use windows::core::ComInterface;
 use windows::Win32::Foundation::*;
 use windows::Win32::Graphics::Direct3D::*;
 use windows::Win32::Graphics::Direct3D11::*;
@@ -36,13 +36,13 @@ fn create_device_with_type(drive_type: D3D_DRIVER_TYPE) -> Result<ID3D11Device> 
         D3D11CreateDevice(
             None,
             drive_type,
-            HINSTANCE::default(),
+            None,
             flags,
-            &feature_levels,
-            D3D11_SDK_VERSION,
-            &mut device,
-            &mut fl,
-            &mut None,
+            Some(&feature_levels),
+            D3D11_SDK_VERSION as u32,
+            Some(&mut device),
+            Some(&mut fl),
+            None,
         )
         .map(|()| device.unwrap())
     }
@@ -72,7 +72,8 @@ fn create_swapchain(device: &ID3D11Device, window: HWND) -> Result<IDXGISwapChai
         Flags: DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH.0 as u32,
     };
 
-    unsafe { factory.CreateSwapChain(device, &sc_desc) }
+    let swap_chain = unsafe { let mut swap_chain = None; factory.CreateSwapChain(device, &sc_desc, &mut swap_chain).ok()?; swap_chain.unwrap() };
+    Ok(swap_chain)
 }
 
 fn get_dxgi_factory(device: &ID3D11Device) -> Result<IDXGIFactory2> {
@@ -86,13 +87,14 @@ fn create_render_target(
 ) -> Result<ID3D11RenderTargetView> {
     unsafe {
         let backbuffer: ID3D11Resource = swapchain.GetBuffer(0)?;
-        device.CreateRenderTargetView(&backbuffer, 0 as _)
+        let mut rtv = None;
+        device.CreateRenderTargetView(&backbuffer, None, Some(&mut rtv))?;
+        Ok(rtv.unwrap())
     }
 }
 
 fn main() -> Result<()> {
     let event_loop = EventLoop::new();
-    let mut device_ctx = None;
     let window = WindowBuilder::new()
         .with_title("imgui_dx11_renderer winit example")
         .with_inner_size(LogicalSize { width: WINDOW_WIDTH, height: WINDOW_HEIGHT })
@@ -101,9 +103,9 @@ fn main() -> Result<()> {
 
     let device = create_device()?;
     let swapchain = unsafe { create_swapchain(&device, transmute(window.hwnd()))? };
-    unsafe {
-        device.GetImmediateContext(&mut device_ctx);
-    }
+    let device_ctx = unsafe {
+        device.GetImmediateContext()?
+    };
     let mut target = Some(create_render_target(&swapchain, &device)?);
 
     let mut imgui = Context::create();
@@ -133,10 +135,8 @@ fn main() -> Result<()> {
         },
         Event::RedrawRequested(_) => {
             unsafe {
-                if let Some(ref context) = device_ctx {
-                    context.OMSetRenderTargets(&[target.clone()], None);
-                    context.ClearRenderTargetView(target.as_ref().unwrap(), &0.6);
-                }
+                device_ctx.OMSetRenderTargets(Some(&[target.clone()]), None);
+                device_ctx.ClearRenderTargetView(target.as_ref().unwrap(), &0.6);
             }
             let ui = imgui.frame();
             imgui::Window::new("Hello world")
