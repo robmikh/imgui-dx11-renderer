@@ -52,7 +52,10 @@ fn create_device() -> Result<ID3D11Device> {
     create_device_with_type(D3D_DRIVER_TYPE_HARDWARE)
 }
 
-fn create_swapchain(device: &ID3D11Device, window: HWND) -> Result<IDXGISwapChain> {
+fn create_swapchain(
+    device: &ID3D11Device,
+    window: windows::Win32::Foundation::HWND,
+) -> Result<IDXGISwapChain> {
     let factory = get_dxgi_factory(device)?;
 
     let sc_desc = DXGI_SWAP_CHAIN_DESC {
@@ -141,19 +144,19 @@ fn main() -> Result<()> {
                 device_ctx.ClearRenderTargetView(target.as_ref().unwrap(), &0.6);
             }
             let ui = imgui.frame();
-            imgui::Window::new("Hello world")
-                .size([300.0, 100.0], imgui::Condition::FirstUseEver)
-                .build(&ui, || {
+            ui.window("Hello world").size([300.0, 100.0], imgui::Condition::FirstUseEver).build(
+                || {
                     ui.text("Hello world!");
                     ui.text("This...is...imgui-rs!");
                     ui.separator();
                     let mouse_pos = ui.io().mouse_pos;
                     ui.text(format!("Mouse Position: ({:.1},{:.1})", mouse_pos[0], mouse_pos[1]));
-                });
+                },
+            );
             ui.show_demo_window(&mut true);
 
             platform.prepare_render(&ui, &window);
-            renderer.render(ui.render()).unwrap();
+            renderer.render(imgui.render()).unwrap();
             unsafe {
                 swapchain.Present(1, 0).unwrap();
             }
